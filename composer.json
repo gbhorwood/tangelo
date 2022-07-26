@@ -1,0 +1,18 @@
+{
+    "name": "ghorwood/tangelo",
+    "authors": [
+        {
+            "name": "grant horwood",
+            "email": "ghorwood@cloverhitch.ca"
+        }
+    ],
+    "require": {
+        "bittyphp/http": "^2.1",
+        "oscarotero/middleland": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ghorwood\\Tangelo\\": "src/"
+        }
+    }
+}

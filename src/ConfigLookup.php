@@ -7,8 +7,15 @@ use Ghorwood\Tangelo\Logger as Logger;
 
 class ConfigLookup 
 {
+    /**
+     * Swoole Table to hold configuration values
+     */
     private \Swoole\Table $db;
 
+
+    /**
+     * Default constructor
+     */
     public function __construct()
     {
     }
@@ -74,7 +81,14 @@ class ConfigLookup
     }
 
 
-    public function get(String $key, String $default = null):String
+    /**
+     * Get one value by it's key with optional default value if not found.
+     *
+     * @param  String $key
+     * @param  String $default  Default value null
+     * @return String|Null
+     */
+    public function get(String $key, String $default = null):?String
     {
         if(!$this->db->exists($key)) {
             return $default;
@@ -83,6 +97,11 @@ class ConfigLookup
     }
 
 
+    /**
+     * Return all values as associative array
+     *
+     * @return Array
+     */
     public function all():Array
     {
         $all = [];

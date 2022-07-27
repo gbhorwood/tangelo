@@ -19,7 +19,7 @@ class TangeloController
         $this->config = $config;
     }
 
-    protected function getConfig(String $key, String $default = null):String
+    protected function getConfig(String $key, String $default = null):?String
     {
         return $this->config->get($key, $default);
     }
@@ -44,7 +44,7 @@ class TangeloController
         return $this->queryParams[$key] ?? null;
     }
 
-    protected function jsonResponse(Int $code, $content = null)
+    protected function jsonResponse(Int $code, $content = null):Response
     {
         $response = new Response(
             json_encode($content),

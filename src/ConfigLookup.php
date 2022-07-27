@@ -29,7 +29,7 @@ class ConfigLookup
             $logger->error("Config file not found at $configFilePath");
             throw new \Exception("Config file not found at ".$configFilePath);
         }
-        $logger->Ok("Configuration file .env found at ".$configFilePath);
+        $logger->Ok("Configuration file .env found at ".$configFilePath, 1);
 
         try {
             /**
@@ -65,7 +65,7 @@ class ConfigLookup
                 $configDb->set($k, ['line' => $v]);
             });
 
-            $logger->Ok("Configuration file .env loaded into internal db");
+            $logger->Ok("Configuration file .env loaded into internal db", 1);
             $this->db = $configDb;
         } catch (Exception $e) {
             $logger->error("Could not create config db: ".$e->getMessage());
@@ -87,8 +87,8 @@ class ConfigLookup
     {
         $all = [];
         foreach ($this->db as $k => $v) {
-            $all[] = $v['line'];
+            $all[$k] = $v['line'];
         }
-        return array_values($all);
+        return $all;
     }
 }

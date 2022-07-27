@@ -13,6 +13,7 @@ use Middleland\Dispatcher;
 use Ghorwood\Tangelo\Router as Router;
 use Ghorwood\Tangelo\Exceptions\RouterException as RouterException;
 use Ghorwood\Tangelo\ConfigLookup as ConfigLookup;
+use Ghorwood\Tangelo\Logger as Logger;
 
 class Middleware
 {
@@ -27,7 +28,12 @@ class Middleware
      */
     private Router $router;
 
+    /**
+     * The config table wrapper for access to .env values
+     */
     private ConfigLookup $config;
+
+    private Logger $logger;
 
     /**
      * Create the middleware object and set the client middleware stack.
@@ -35,10 +41,11 @@ class Middleware
      * @param  Router       $router The \Ghorwood\Tangelo\Router object
      * @param  ConfigLookup $configLookup
      */
-    public function __construct(Router $router, ConfigLookup $configLookup)
+    public function __construct(Router $router, ConfigLookup $configLookup, Logger $logger)
     {
         $this->router = $router;
         $this->config = $configLookup;
+        $this->logger = $logger;
 
         /**
          * Load all the user-defined middleware functions into an array.
@@ -48,13 +55,13 @@ class Middleware
          * @todo Do a PSR-11 or something instead of whatever this is -gbh
          */
         $mw = NAMESPACE_ROOT."\Middleware";
-        $middlewareStackStrings = array_map(fn ($m) => "\\".$mw."::".$m, $mw::stack());
-        $this->middleware = array_map(fn ($m) => $m(), $middlewareStackStrings);
+        $mwObj = new $mw($configLookup);
+        $this->middleware = array_map(fn($m) => $mwObj->$m(), $mwObj::stack());
 
         /**
          * Middleware function that runs the actual routed funtion goes at the end
          */
-        $this->middleware[] = function ($psr7Request, $next = null):ResponseInterface {
+        $this->middleware[] = function ($psr7Request, $next = null) :ResponseInterface {
             try {
                 // get class.function for this method/endpoint from the router
                 $function = $this->router->getRoute($psr7Request->getMethod(), $psr7Request->getUri());
@@ -62,8 +69,10 @@ class Middleware
                 // get class and method to call from class.method string
                 list($className, $method) = explode('.', $function['function']);
 
-                // load, instantiate and call the controller method
-                // @todo Do a PSR-11 or something instead of whatever this is -gbh
+                /**
+                 * Instantiate the controller class
+                 * @todo Do a PSR-11 or something instead of whatever this is -gbh
+                 */
                 $classByNamespace = NAMESPACE_ROOT.'\Controllers\\'.$className;
                 if(!class_exists($classByNamespace)) {
                     throw new RouterException("File does not exist", 500);
@@ -74,22 +83,30 @@ class Middleware
                     $this->config
                 );
 
-                // run the method
+                /**
+                 * Call the controller method
+                 */
                 $controllerResponse = $class->$method();
+
+                /**
+                 * Log traffic if configuration is set
+                 */
+                if($this->config->get('LOGGING_SHOW_TRAFFIC', false)) {
+                    $this->logger->traffic(join(' ', [
+                        '('.date("Y-m-d H:i:s").')',
+                        $psr7Request->getMethod(), 
+                        $psr7Request->getUri(), 
+                        $controllerResponse->getStatusCode()
+                    ]));
+                }
 
                 return $controllerResponse;
             }
             catch (RouterException $re) {
-                // @todo log here
-                return new Response(
-                    json_encode(['data' => $re->getMessage()]),
-                    $re->getHttpCode());
+                return new Response(json_encode(['data' => $re->getMessage()]), $re->getHttpCode());
             }
             catch (\Exception $e) {
-                // @todo log here
-                return new Response(
-                    json_encode(['data' => $e->getMessage()]),
-                    500);
+                return new Response(json_encode(['data' => $e->getMessage()]), 500);
             }
         };
     } // __construct

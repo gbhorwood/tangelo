@@ -89,7 +89,7 @@ class Router
                  * that is an error of type 405.
                  */
                 if (!in_array($method, array_keys($routeMethodsArray))) {
-                    $this->logger->debug("Route '$endpoint' does have method $method");
+                    $this->logger->debug("Route '$endpoint' does have method $method", 2);
                     throw new RouterException("Route '$endpoint' does have method $method", 405);
                 }
 
@@ -114,7 +114,7 @@ class Router
          * HTTP 404
          * No more routes to test.
          */
-        $this->logger->debug("Route '$endpoint' not found");
+        $this->logger->debug("Route '$endpoint' not found", 2);
         throw new RouterException("Not Found", 404);
     } // getRoute
 

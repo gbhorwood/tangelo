@@ -30,7 +30,7 @@ class RoutesLookup
             $logger->error("Routes file not found at $routesFilePath");
             throw new \Exception("Routes file not found at ".$routesFilePath);
         }
-        $logger->Ok("Routes file routes.txt found at ".$routesFilePath);
+        $logger->Ok("Routes file routes.txt found at ".$routesFilePath, 1);
 
         try {
             /**
@@ -56,7 +56,7 @@ class RoutesLookup
                 $routesDb->set($k, ['line' => $v]);
             });
 
-            $logger->Ok("Routes file routes.txt loaded into internal db");
+            $logger->Ok("Routes file routes.txt loaded into internal db", 1);
             $this->db = $routesDb;
         } catch (Exception $e) {
             $logger->error("Could not create routes db: ".$e->getMessage());

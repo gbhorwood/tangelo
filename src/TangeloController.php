@@ -5,15 +5,23 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Bitty\Http\ResponseFactory;
 use Bitty\Http\Response;
+use Ghorwood\Tangelo\ConfigLookup as ConfigLookup;
 
 class TangeloController
 {
     private Array $pathParams;
     private Array $queryParams;
+    private ConfigLookup $config;
 
-    public function __construct(Array $pathParams, Array $queryParams) {
+    public function __construct(Array $pathParams, Array $queryParams, ConfigLookup $config) {
         $this->pathParams = $pathParams;
         $this->queryParams = $queryParams;
+        $this->config = $config;
+    }
+
+    protected function getConfig(String $key, String $default = null):String
+    {
+        return $this->config->get($key, $default);
     }
 
     protected function getPathParams()

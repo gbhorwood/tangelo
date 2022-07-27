@@ -8,7 +8,8 @@
     ],
     "require": {
         "bittyphp/http": "^2.1",
-        "oscarotero/middleland": "^1.0"
+        "oscarotero/middleland": "^1.0",
+        "league/container": "^4.2"
     },
     "autoload": {
         "psr-4": {

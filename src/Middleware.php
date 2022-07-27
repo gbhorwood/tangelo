@@ -12,6 +12,7 @@ use Middleland\Dispatcher;
 
 use Ghorwood\Tangelo\Router as Router;
 use Ghorwood\Tangelo\Exceptions\RouterException as RouterException;
+use Ghorwood\Tangelo\ConfigLookup as ConfigLookup;
 
 class Middleware
 {
@@ -26,14 +27,18 @@ class Middleware
      */
     private Router $router;
 
+    private ConfigLookup $config;
+
     /**
      * Create the middleware object and set the client middleware stack.
      *
-     * @param  Router $router The \Ghorwood\Tangelo\Router object
+     * @param  Router       $router The \Ghorwood\Tangelo\Router object
+     * @param  ConfigLookup $configLookup
      */
-    public function __construct(Router $router)
+    public function __construct(Router $router, ConfigLookup $configLookup)
     {
         $this->router = $router;
+        $this->config = $configLookup;
 
         /**
          * Load all the user-defined middleware functions into an array.
@@ -65,7 +70,8 @@ class Middleware
                 }
                 $class = new $classByNamespace(
                     $function['path_args'] ?? [],
-                    $psr7Request->getQueryParams() ?? []
+                    $psr7Request->getQueryParams() ?? [],
+                    $this->config
                 );
 
                 // run the method
@@ -85,10 +91,8 @@ class Middleware
                     json_encode(['data' => $e->getMessage()]),
                     500);
             }
-
-
         };
-    }
+    } // __construct
 
 
     public static function runControllerMethod()

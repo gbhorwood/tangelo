@@ -44,6 +44,8 @@ class Httpserver
          * Failure is fatal.
          */
         try {
+            $this->logger->welcome();
+
             $configFilePath = $scriptRoot.DIRECTORY_SEPARATOR.".env";
             $this->configLookup = new ConfigLookup();
             $this->configLookup->load($configFilePath, $this->logger);
@@ -53,6 +55,7 @@ class Httpserver
             $this->routesLookup->load($routesFilePath, $this->logger);
 
             $this->logger->setVerbosity(intval($this->configLookup->get('LOGGING_VERBOSITY')));
+            $this->logger->setUseColour(intval($this->configLookup->get('LOGGING_USE_COLOUR')));
         }
         catch (\Exception $e) {
             die();

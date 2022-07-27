@@ -15,6 +15,12 @@ use Ghorwood\Tangelo\Exceptions\RouterException as RouterException;
 use Ghorwood\Tangelo\ConfigLookup as ConfigLookup;
 use Ghorwood\Tangelo\Logger as Logger;
 
+/**
+ * Middleware handler
+ *
+ * For getting and running user-supplied middleware and running the
+ * controller method.
+ */
 class Middleware
 {
 
@@ -33,6 +39,9 @@ class Middleware
      */
     private ConfigLookup $config;
 
+    /**
+     * Logger object
+     */
     private Logger $logger;
 
     /**
@@ -59,15 +68,18 @@ class Middleware
         $this->middleware = array_map(fn($m) => $mwObj->$m(), $mwObj::stack());
 
         /**
-         * Middleware function that runs the actual routed funtion goes at the end
+         * Run the controller method
+         * Middleware function appended to end of middleware stack that resolves the route,
+         * loads the controller class and runs the appropriate method.
          */
         $this->middleware[] = function ($psr7Request, $next = null) :ResponseInterface {
             try {
-                // get class.function for this method/endpoint from the router
-                $function = $this->router->getRoute($psr7Request->getMethod(), $psr7Request->getUri());
-
-                // get class and method to call from class.method string
-                list($className, $method) = explode('.', $function['function']);
+                /**
+                 * Get 'class.method' that this http method/endpoint in the router resolves to
+                 * This throws RouterException for 404 and 405 cases.
+                 */
+                $resolved = $this->router->getRoute($psr7Request->getMethod(), $psr7Request->getUri());
+                list($className, $method) = explode('.', $resolved['function']);
 
                 /**
                  * Instantiate the controller class
@@ -78,7 +90,7 @@ class Middleware
                     throw new RouterException("File does not exist", 500);
                 }
                 $class = new $classByNamespace(
-                    $function['path_args'] ?? [],
+                    $resolved['path_args'] ?? [],
                     $psr7Request->getQueryParams() ?? [],
                     $this->config
                 );
@@ -102,56 +114,22 @@ class Middleware
 
                 return $controllerResponse;
             }
+            /**
+             * Catch router exceptions that result in:
+             * - 404
+             * - 405
+             */
             catch (RouterException $re) {
                 return new Response(json_encode(['data' => $re->getMessage()]), $re->getHttpCode());
             }
+            /**
+             * Catch all other exceptions that result in 500
+             */
             catch (\Exception $e) {
                 return new Response(json_encode(['data' => $e->getMessage()]), 500);
             }
         };
     } // __construct
-
-
-    public static function runControllerMethod()
-    {
-        return function ($psr7Request, $next = null):ResponseInterface {
-            try {
-                // get class.function for this method/endpoint from the router
-                $function = $this->router->getRoute($psr7Request->getMethod(), $psr7Request->getUri());
-
-                // get class and method to call from class.method string
-                list($className, $method) = explode('.', $function['function']);
-
-                // load, instantiate and call the controller method
-                // @todo Do a PSR-11 or something instead of whatever this is -gbh
-                $classByNamespace = NAMESPACE_ROOT.'\Controllers\\'.$className;
-                if(!class_exists($classByNamespace)) {
-                    throw new RouterException("File does not exist", 500);
-                }
-                $class = new $classByNamespace(
-                    $function['path_args'] ?? [],
-                    $psr7Request->getQueryParams() ?? []
-                );
-
-                // run the method
-                $controllerResponse = $class->$method();
-
-                return $controllerResponse;
-            }
-            catch (RouterException $re) {
-                // @todo log here
-                return new Response(
-                    json_encode(['data' => $re->getMessage()]),
-                    $re->getHttpCode());
-            }
-            catch (\Exception $e) {
-                // @todo log here
-                return new Response(
-                    json_encode(['data' => $e->getMessage()]),
-                    500);
-            }
-        };
-    }
 
 
     /**

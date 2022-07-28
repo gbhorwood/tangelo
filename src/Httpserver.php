@@ -18,9 +18,10 @@ use Bitty\Http\ServerRequestFactory;
 
 use Middleland\Dispatcher;
 
+use Ghorwood\Tangelo\Mysql as Mysql;
 use Ghorwood\Tangelo\Logger as Logger;
-use Ghorwood\Tangelo\ConfigLookup as ConfigLookup;
-use Ghorwood\Tangelo\RoutesLookup as RoutesLookup;
+use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
+use Ghorwood\Tangelo\Lookups\RoutesLookup as RoutesLookup;
 use Ghorwood\Tangelo\Exceptions\RouterException as RouterException;
 
 
@@ -34,6 +35,7 @@ class Httpserver
     private ConfigLookup $configLookup;
     private RoutesLookup $routesLookup;
     private Logger $logger;
+    private Mysql $mysql;
 
     public function __construct(String $scriptRoot, String $namespaceRoot)
     {
@@ -47,15 +49,17 @@ class Httpserver
             $this->logger->welcome();
 
             $configFilePath = $scriptRoot.DIRECTORY_SEPARATOR.".env";
-            $this->configLookup = new ConfigLookup();
-            $this->configLookup->load($configFilePath, $this->logger);
+            $this->configLookup = new ConfigLookup($this->logger);
+            $this->configLookup->load($configFilePath);
 
             $routesFilePath = $scriptRoot.DIRECTORY_SEPARATOR."routes.txt";
-            $this->routesLookup = new RoutesLookup();
-            $this->routesLookup->load($routesFilePath, $this->logger);
+            $this->routesLookup = new RoutesLookup($this->logger);
+            $this->routesLookup->load($routesFilePath);
 
             $this->logger->setVerbosity(intval($this->configLookup->get('LOGGING_VERBOSITY')));
             $this->logger->setUseColour(intval($this->configLookup->get('LOGGING_USE_COLOUR')));
+
+            $this->mysql = new Mysql($this->configLookup, $this->logger);
         }
         catch (\Exception $e) {
             die();
@@ -99,7 +103,7 @@ class Httpserver
          */
         $http->on('Request', function (SwRequest $swRequest, SwResponse $swResponse) {
             $psr7Request = $this->makePsr7Request($swRequest);
-            $mw = new Middleware($this->router, $this->configLookup, $this->logger);
+            $mw = new Middleware($this->router, $this->configLookup, $this->mysql, $this->logger);
             $psr7Response = $mw->run($psr7Request);
             $this->emitPsr7($swResponse, $psr7Response);
         });

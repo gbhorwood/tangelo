@@ -1,42 +1,39 @@
 <?php
-namespace Ghorwood\Tangelo;
+namespace Ghorwood\Tangelo\Lookups;
 
 use Swoole\Http\Table;
 
 use Ghorwood\Tangelo\Logger as Logger;
 
-class ConfigLookup 
+class ConfigLookup extends Lookup
 {
-    /**
-     * Swoole Table to hold configuration values
-     */
-    private \Swoole\Table $db;
-
 
     /**
      * Default constructor
+     *
+     * @param  Logger  $logger
      */
-    public function __construct()
+    public function __construct(Logger $logger)
     {
+        parent::__construct($logger);
     }
 
     /**
      * Reads config key values from .env text file and inserts into Swoole\Table
      *
      * @param  String  $configFilePath
-     * @param  Logger  $logger
      * @return void
      */
-    public function load(String $configFilePath, Logger $logger):void
+    public function load(String $configFilePath):void
     {
         /**
          * Validate config file .env exists
          */
         if (!file_exists($configFilePath) || !is_readable($configFilePath)) {
-            $logger->error("Config file not found at $configFilePath");
+            $this->logger->error("Config file not found at $configFilePath");
             throw new \Exception("Config file not found at ".$configFilePath);
         }
-        $logger->Ok("Configuration file .env found at ".$configFilePath, 1);
+        $this->logger->Ok("Configuration file .env found at ".$configFilePath, 1);
 
         try {
             /**
@@ -52,8 +49,8 @@ class ConfigLookup
              * Convert to array keyed by value to left of =
              */
             $configsKeyedArray = [];
-            foreach($configsArray as $configLine) {
-                $configLineTokens = explode('=',$configLine);
+            foreach ($configsArray as $configLine) {
+                $configLineTokens = explode('=', $configLine);
                 // values may contain = characters. handle that.
                 $configsKeyedArray[array_shift($configLineTokens)] = trim(join('=', $configLineTokens));
             }
@@ -61,9 +58,7 @@ class ConfigLookup
             /**
              * create swoole table
              */
-            $configDb = new \Swoole\Table(filesize($configFilePath)*1.2);
-            $configDb->column('line', \Swoole\Table::TYPE_STRING, 512);
-            $configDb->create();
+            $configDb = $this->createDb(filesize($configFilePath)*1.2);
 
             /**
              * set each line in the swoole table
@@ -72,42 +67,11 @@ class ConfigLookup
                 $configDb->set($k, ['line' => $v]);
             });
 
-            $logger->Ok("Configuration file .env loaded into internal db", 1);
+            $this->logger->Ok("Configuration file .env loaded into internal db", 1);
             $this->db = $configDb;
         } catch (Exception $e) {
-            $logger->error("Could not create config db: ".$e->getMessage());
+            $this->logger->error("Could not create config db: ".$e->getMessage());
             throw new \Exception("Could not create config db");
         }
-    }
-
-
-    /**
-     * Get one value by it's key with optional default value if not found.
-     *
-     * @param  String $key
-     * @param  String $default  Default value null
-     * @return String|Null
-     */
-    public function get(String $key, String $default = null):?String
-    {
-        if(!$this->db->exists($key)) {
-            return $default;
-        }
-        return $this->db->get($key, 'line');
-    }
-
-
-    /**
-     * Return all values as associative array
-     *
-     * @return Array
-     */
-    public function all():Array
-    {
-        $all = [];
-        foreach ($this->db as $k => $v) {
-            $all[$k] = $v['line'];
-        }
-        return $all;
     }
 }

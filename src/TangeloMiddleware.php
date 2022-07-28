@@ -4,7 +4,7 @@ namespace Ghorwood\Tangelo;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
-use Ghorwood\Tangelo\ConfigLookup as ConfigLookup;
+use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
 
 
 /**

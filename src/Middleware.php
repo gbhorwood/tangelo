@@ -2,18 +2,19 @@
 namespace Ghorwood\Tangelo;
 
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
-use Bitty\Http\ResponseFactory;
 use Bitty\Http\Response;
+use Bitty\Http\ResponseFactory;
 
 use Middleland\Dispatcher;
 
-use Ghorwood\Tangelo\Router as Router;
-use Ghorwood\Tangelo\Exceptions\RouterException as RouterException;
-use Ghorwood\Tangelo\ConfigLookup as ConfigLookup;
+use Ghorwood\Tangelo\Mysql as Mysql;
 use Ghorwood\Tangelo\Logger as Logger;
+use Ghorwood\Tangelo\Router as Router;
+use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
+use Ghorwood\Tangelo\Exceptions\RouterException as RouterException;
 
 /**
  * Middleware handler
@@ -40,6 +41,11 @@ class Middleware
     private ConfigLookup $config;
 
     /**
+     * 
+     */
+    private Mysql $mysql;
+
+    /**
      * Logger object
      */
     private Logger $logger;
@@ -50,11 +56,12 @@ class Middleware
      * @param  Router       $router The \Ghorwood\Tangelo\Router object
      * @param  ConfigLookup $configLookup
      */
-    public function __construct(Router $router, ConfigLookup $configLookup, Logger $logger)
+    public function __construct(Router $router, ConfigLookup $configLookup, Mysql $mysql, Logger $logger)
     {
         $this->router = $router;
         $this->config = $configLookup;
         $this->logger = $logger;
+        $this->mysql = $mysql;
 
         /**
          * Load all the user-defined middleware functions into an array.
@@ -92,7 +99,9 @@ class Middleware
                 $class = new $classByNamespace(
                     $resolved['path_args'] ?? [],
                     $psr7Request->getQueryParams() ?? [],
-                    $this->config
+                    $this->mysql,
+                    $this->config,
+                    $this->logger
                 );
 
                 /**

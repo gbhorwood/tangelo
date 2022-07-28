@@ -1,9 +1,9 @@
 <?php
 namespace Ghorwood\Tangelo;
 
-use Ghorwood\Tangelo\ConfigLookup as ConfigLookup;
-use Ghorwood\Tangelo\RoutesLookup as RoutesLookup;
 use Ghorwood\Tangelo\Logger as Logger;
+use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
+use Ghorwood\Tangelo\Lookups\RoutesLookup as RoutesLookup;
 use Ghorwood\Tangelo\Exceptions\RouterException as RouterException;
 
 class Router

@@ -1,22 +1,28 @@
 <?php
 namespace Ghorwood\Tangelo;
 
-use Swoole\Table;
+use Ghorwood\Tangelo\Logger as Logger;
+use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
+use Ghorwood\Tangelo\Lookups\RoutesLookup as RoutesLookup;
 use Ghorwood\Tangelo\Exceptions\RouterException as RouterException;
 
 class Router
 {
     /**
-     * The \Swoole\Table to hold routes cache
      */
-    private ?\Swoole\Table $routesDb = null;
+    private ConfigLookup $configLookup;
+    private RoutesLookup $routesLookup;
+
+    private Logger $logger;
 
     /**
      * Constructor
      */
-    public function __construct($routesDb)
+    public function __construct(RoutesLookup $routesLookup, ConfigLookup $configLookup, Logger $logger)
     {
-        $this->routesDb = $routesDb;
+        $this->routesLookup = $routesLookup;
+        $this->configLookup = $configLookup;
+        $this->logger = $logger;
     }
 
 
@@ -43,14 +49,15 @@ class Router
     public function getRoute(String $method, String $endpoint):array
     {
         /**
-         * Load the route table from file or cache
+         * Load the route table from the RoutesLookup wrapper for the Swoole\Table
+         * containing all the routes.
          */
-        $routeLookup = $this->getRouteLookup();
+        $routeTable = $this->getRouteTable();
 
         /**
          * Test every route in the route table, handle first one that matches the request
          */
-        foreach ($routeLookup as $routeEndpoint => $routeFunctionsArray) {
+        foreach ($routeTable as $routeEndpoint => $routeMethodsArray) {
 
             /**
              * Build a list of keys for path arguments. so, ie. the route endpoint
@@ -81,14 +88,15 @@ class Router
                  * If this route endpoint does not have an entry for the HTTP method of the request
                  * that is an error of type 405.
                  */
-                if (!in_array($method, array_keys($routeFunctionsArray))) {
-                    throw new RouterException("Route '$routeEndpointRegex' does have method $method", 405);
+                if (!in_array($method, array_keys($routeMethodsArray))) {
+                    $this->logger->debug("Route '$endpoint' does have method $method", 2);
+                    throw new RouterException("Route '$endpoint' does have method $method", 405);
                 }
 
                 /**
                  * Extract the function path from the route
                  */
-                $function = $routeFunctionsArray[$method];
+                $function = $routeMethodsArray[$method];
 
                 /**
                  * Key the positional path arguments with the key values set in the route.
@@ -106,6 +114,7 @@ class Router
          * HTTP 404
          * No more routes to test.
          */
+        $this->logger->debug("Route '$endpoint' not found", 2);
         throw new RouterException("Not Found", 404);
     } // getRoute
 
@@ -125,7 +134,7 @@ class Router
      *
      * @return Array
      */
-    private function getRouteLookup():array
+    private function getRouteTable():array
     {
         /**
          * Get the array of the routes, one route as a line per element
@@ -148,13 +157,13 @@ class Router
          * Key by the endpoint with the values an array of
          * methods keying the associated function.
          */
-        $routeLookup = [];
+        $routeTable = [];
         foreach ($routeTokens as $rt) {
-            $routeLookup[$rt['endpoint']][$rt['method']] = $rt['function'];
+            $routeTable[$rt['endpoint']][$rt['method']] = $rt['function'];
         }
 
-        return $routeLookup;
-    } // getRouteLookup
+        return $routeTable;
+    } // getRouteTable
 
 
     /**
@@ -164,13 +173,12 @@ class Router
      * and is then cached in a Swoole Table for faster access on future requests.
      *
      * @return Array
-     * @throws RouterException
      */
     private function getRouteLines():array
     {
         $routesArray = [];
-        foreach ($this->routesDb as $k => $v) {
-            $routesArray[] = $v['line'];
+        foreach ($this->routesLookup->all() as $k => $v) {
+            $routesArray[] = $v;
         }
         return array_values($routesArray);
     } // getRouteLines

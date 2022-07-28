@@ -22,6 +22,7 @@ use Ghorwood\Tangelo\Mysql as Mysql;
 use Ghorwood\Tangelo\Logger as Logger;
 use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
 use Ghorwood\Tangelo\Lookups\RoutesLookup as RoutesLookup;
+use Ghorwood\Tangelo\Lookups\CacheLookup as CacheLookup;
 use Ghorwood\Tangelo\Exceptions\RouterException as RouterException;
 
 
@@ -34,6 +35,7 @@ class Httpserver
     private Router $router;
     private ConfigLookup $configLookup;
     private RoutesLookup $routesLookup;
+    private CacheLookup $cacheLookup;
     private Logger $logger;
     private Mysql $mysql;
 
@@ -58,6 +60,9 @@ class Httpserver
 
             $this->logger->setVerbosity(intval($this->configLookup->get('LOGGING_VERBOSITY')));
             $this->logger->setUseColour(intval($this->configLookup->get('LOGGING_USE_COLOUR')));
+
+            $this->cacheLookup = new CacheLookup($this->logger);
+            $this->cacheLookup->load();
 
             $this->mysql = new Mysql($this->configLookup, $this->logger);
         }
@@ -103,7 +108,7 @@ class Httpserver
          */
         $http->on('Request', function (SwRequest $swRequest, SwResponse $swResponse) {
             $psr7Request = $this->makePsr7Request($swRequest);
-            $mw = new Middleware($this->router, $this->configLookup, $this->mysql, $this->logger);
+            $mw = new Middleware($this->router, $this->configLookup, $this->mysql, $this->cacheLookup, $this->logger);
             $psr7Response = $mw->run($psr7Request);
             $this->emitPsr7($swResponse, $psr7Response);
         });

@@ -7,7 +7,6 @@ use Ghorwood\Tangelo\Logger as Logger;
 
 class ConfigLookup extends Lookup
 {
-
     /**
      * Default constructor
      *

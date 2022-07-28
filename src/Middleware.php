@@ -13,6 +13,7 @@ use Middleland\Dispatcher;
 use Ghorwood\Tangelo\Mysql as Mysql;
 use Ghorwood\Tangelo\Logger as Logger;
 use Ghorwood\Tangelo\Router as Router;
+use Ghorwood\Tangelo\Lookups\CacheLookup as CacheLookup;
 use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
 use Ghorwood\Tangelo\Exceptions\RouterException as RouterException;
 
@@ -41,6 +42,11 @@ class Middleware
     private ConfigLookup $config;
 
     /**
+     * The cache table wrapper
+     */
+    private CacheLookup $cache;
+
+    /**
      * 
      */
     private Mysql $mysql;
@@ -56,10 +62,11 @@ class Middleware
      * @param  Router       $router The \Ghorwood\Tangelo\Router object
      * @param  ConfigLookup $configLookup
      */
-    public function __construct(Router $router, ConfigLookup $configLookup, Mysql $mysql, Logger $logger)
+    public function __construct(Router $router, ConfigLookup $configLookup, Mysql $mysql, CacheLookup $cacheLookup, Logger $logger)
     {
         $this->router = $router;
         $this->config = $configLookup;
+        $this->cache = $cacheLookup;
         $this->logger = $logger;
         $this->mysql = $mysql;
 
@@ -101,6 +108,7 @@ class Middleware
                     $psr7Request->getQueryParams() ?? [],
                     $this->mysql,
                     $this->config,
+                    $this->cache,
                     $this->logger
                 );
 

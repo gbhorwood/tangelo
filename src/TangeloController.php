@@ -12,6 +12,7 @@ use Bitty\Http\ResponseFactory;
 
 use Ghorwood\Tangelo\Mysql as Mysql;
 use Ghorwood\Tangelo\Logger as Logger;
+use Ghorwood\Tangelo\Lookups\CacheLookup as CacheLookup;
 use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
 
 class TangeloController
@@ -22,10 +23,11 @@ class TangeloController
     private Mysql $mysql;
     private Logger $logger;
 
-    public function __construct(Array $pathParams, Array $queryParams, Mysql $mysql, ConfigLookup $config, Logger $logger) {
+    public function __construct(Array $pathParams, Array $queryParams, Mysql $mysql, ConfigLookup $config, CacheLookup $cache, Logger $logger) {
         $this->pathParams = $pathParams;
         $this->queryParams = $queryParams;
         $this->config = $config;
+        $this->cache = $cache;
         $this->mysql = $mysql;
         $this->logger = $logger;
     }

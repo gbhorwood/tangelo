@@ -6,15 +6,14 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
 
-
 /**
  * Superclass for user-created middleware.
+ *
  */
 abstract class TangeloMiddleware
 {
-
     /**
-     * Configuration lookup table wrapper
+     * Configuration lookup
      */
     protected ConfigLookup $config;
 
@@ -23,8 +22,8 @@ abstract class TangeloMiddleware
      *
      * @param  ConfigLookup $config
      */
-    public function __construct(ConfigLookup $config) {
+    public function __construct(ConfigLookup $config)
+    {
         $this->config = $config;
     }
-
 }

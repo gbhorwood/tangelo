@@ -4,8 +4,8 @@ namespace Ghorwood\Tangelo;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-use Swoole\Coroutine as co;
 use Swoole\Http\Table;
+use Swoole\Coroutine as co;
 
 use Bitty\Http\Response;
 use Bitty\Http\ResponseFactory;
@@ -15,15 +15,56 @@ use Ghorwood\Tangelo\Logger as Logger;
 use Ghorwood\Tangelo\Lookups\CacheLookup as CacheLookup;
 use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
 
+/**
+ * Superclass for user-created controllers
+ *
+ */
 class TangeloController
 {
-    private Array $pathParams;
-    private Array $queryParams;
+
+    /**
+     * Associative array of parameters in the endpoint path
+     */
+    private array $pathParams;
+
+    /**
+     * Associative array of parameters in the query string
+     */
+    private array $queryParams;
+
+    /**
+     * Lookup for config values, wrapping a Swoole\Table
+     */
     private ConfigLookup $config;
+
+    /**
+     * Mysql db access object
+     */
     private Mysql $mysql;
+
+    /**
+     * The logger
+     */
     private Logger $logger;
 
-    public function __construct(Array $pathParams, Array $queryParams, Mysql $mysql, ConfigLookup $config, CacheLookup $cache, Logger $logger) {
+    /**
+     * Lookup for Swoole\Table to hold user cached data
+     */
+    protected  CacheLookup $cache;
+
+    /**
+     * Super constructor
+     *
+     * @param  Array        $pathParams  Associative array of the parameters passed in the endpoint path
+     * @param  Array        $queryParams Associative array of the parameters passed in the query string
+     * @param  Mysql        $mysql       The Mysql object for querying
+     * @param  ConfigLookup $config      The lookup wrapper to the Swoole\Table of configuration data
+     * @param  CacheLookup  $cache       The lookup wrapper to the Swoole\Table that will hold user-cached data
+     * @param  Logger       $logger      The log writer
+     * @return void
+     */
+    public function __construct(array $pathParams, array $queryParams, Mysql $mysql, ConfigLookup $config, CacheLookup $cache, Logger $logger)
+    {
         $this->pathParams = $pathParams;
         $this->queryParams = $queryParams;
         $this->config = $config;
@@ -34,13 +75,37 @@ class TangeloController
 
 
     /**
-     * Run a prepared pdo query and get the results
+     * Do debug output
+     *
+     * @param  String $message
+     * @return void
+     */
+    protected function debug(String $message):void
+    {
+        $this->logger->debug($message);
+    }
+
+
+    /**
+     * Do log output
+     *
+     * @param  String $message
+     * @return void
+     */
+    protected function log(String $message):void
+    {
+        $this->logger->log($message);
+    }
+
+
+    /**
+     * Run a prepared PDO query and get the results
      *
      * @param  String $sql
      * @param  Array  $parameters
      * @return Array
      */
-    protected function query(String $sql, array $parameters = []):Array
+    protected function query(String $sql, array $parameters = []):array
     {
         return $this->mysql->query($sql, $parameters);
     }
@@ -50,7 +115,7 @@ class TangeloController
      * Return one config value by its key, with optional default value.
      * Null returned if not found.
      *
-     * @param  String $key      The key to search on 
+     * @param  String $key      The key to search on
      * @param  String $default  The optional default value
      * @return ?String
      */
@@ -65,7 +130,7 @@ class TangeloController
      *
      * @return Array
      */
-    protected function getPathParams():Array
+    protected function getPathParams():array
     {
         return $this->pathParams;
     }
@@ -74,7 +139,7 @@ class TangeloController
     /**
      * Return one path parameter by its key.
      *
-     * @param  String $key The key to search on 
+     * @param  String $key The key to search on
      * @return ?String
      */
     protected function getPathParam(String $key):?String
@@ -88,7 +153,7 @@ class TangeloController
      *
      * @return Array
      */
-    protected function getQueryParams():Array
+    protected function getQueryParams():array
     {
         return $this->queryParams;
     }
@@ -97,7 +162,7 @@ class TangeloController
     /**
      * Return one query string parameter by its key.
      *
-     * @param  String $key The key to search on 
+     * @param  String $key The key to search on
      * @return ?String
      */
     protected function getQueryParam(String $key):?String
@@ -105,39 +170,6 @@ class TangeloController
         return $this->queryParams[$key] ?? null;
     }
 
-    protected function cache(String $method, String $identifier, String $data):bool
-    {
-        $expirySeconds = 60;
-        $expiryTs = time() + $expirySeconds;
-
-        if(!strlen(trim($method)) || !strlen(trim(strval($identifier)))) {
-            $this->logger->error("Could not cache on a null key");
-            return false;
-        }
-        $key = md5($method)."::".$identifier;
-        echo strlen($key);
-
-        ###############################################
-        #
-        # NOTE
-        # create the cache table in httpServer and inject
-        #
-        #
-
-        /**
-         * Create Swoole Table if not exists
-        if(!$this->cache) {
-            $this->logger->debug("creating cache table");
-            $this->cache = new \Swoole\Table(1024000);
-            $this->cache->column('data', \Swoole\Table::TYPE_STRING, 512);
-            $this->cache->column('expiry_ts', \Swoole\Table::TYPE_INT, 4);
-            $this->cache->create();
-        }
-        $this->cache->set($key, ['data' => $data, 'expiry_ts' => $expiryTs]);
-         */
-
-        return true;
-    }
 
     /**
      * Build a Psr7 Response object with a json body and optional headers.
@@ -147,7 +179,7 @@ class TangeloController
      * @param  Array $headers The optional array of headers
      * @return Response
      */
-    protected function jsonResponse($content = null, Int $code = 200, Array $headers = []):Response
+    protected function jsonResponse($content = null, Int $code = 200, array $headers = []):Response
     {
         $headers = array_merge($headers, ['Content-Type' => 'application/json']);
         $response = new Response(

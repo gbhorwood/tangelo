@@ -1,0 +1,12 @@
+###
+# Tangelo example routes file
+#
+# Routes are written in the format:
+# <METHOD>  <endpoint>  <classname>.<methodname>
+#
+# 
+
+GET  /things/{id}               SampleController.getThing             # handle path parameters example
+GET  /things/{id}/caching       SampleController.getThingCaching      # handle response caching example
+GET  /things/{id}/querystring   SampleController.getThingQueryString  # handle query string example
+POST /things                    SampleController.postThing            # handle json body example

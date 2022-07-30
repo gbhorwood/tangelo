@@ -16,6 +16,7 @@ define('DEBUG', "[".ESC."[".YELLOW."mDEBUG".CLOSE_ANSI."] ");
 define('ERROR', "[".ESC."[".RED."mERROR".CLOSE_ANSI."] ");
 define('LOG', "[".ESC."[".CYAN."mLOG".CLOSE_ANSI."] ");
 define('TRAFFIC', "[".ESC."[".BLUE."mTRAFFIC".CLOSE_ANSI."] ");
+define('BOLD_ANSI', ESC."[1m");
 define('LOG_PLAIN', "[LOG] ");
 define('OK_PLAIN', "[OK] ");
 define('TRAFFIC_PLAIN', "[TRAFFIC] ");
@@ -54,7 +55,7 @@ class Logger
      */
     public function welcome():void
     {
-        fwrite(STDOUT, "🍊tangelo ".trim(@file_get_contents(__DIR__.'/../version')).PHP_EOL);
+        fwrite(STDOUT, "🍊".BOLD_ANSI."tangelo ".CLOSE_ANSI."[".trim(@file_get_contents(__DIR__.'/../version'))."]".PHP_EOL.PHP_EOL);
     }
 
     /**
@@ -146,5 +147,17 @@ class Logger
     {
         $level = $this->useColour ? ERROR : ERROR_PLAIN;
         fwrite(STDERR, $level.$message.PHP_EOL);
+    }
+
+
+    /**
+     * Output one line of bold text
+     *
+     * @param  String $message
+     * @return void
+     */
+    public function headline(String $message):void
+    {
+        fwrite(STDOUT, BOLD_ANSI.$message.CLOSE_ANSI.PHP_EOL);
     }
 }

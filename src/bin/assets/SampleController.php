@@ -108,9 +108,10 @@ class SampleController extends \Ghorwood\Tangelo\TangeloController
         /**
          * Store the response body in the cache as a string.
          * Keying is done by the method name using __METHOD__ and a value that
-         * is unique to this method.
+         * is unique to this method. The last parameter is the life of the
+         * cache in seconds. If omitted, the default is 60.
          */
-        $this->cache->store(__METHOD__, $id, json_encode($thing));
+        $this->cache->store(__METHOD__, $id, json_encode($thing), 60);
 
         /**
          * An optional array of headers to add to the response.

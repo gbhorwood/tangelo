@@ -47,7 +47,7 @@ class Middleware
     private CacheLookup $cache;
 
     /**
-     * 
+     * The Mysql database access object 
      */
     private Mysql $mysql;
 
@@ -57,18 +57,30 @@ class Middleware
     private Logger $logger;
 
     /**
+     * Namespace of project
+     */
+    private String $namespaceRoot;
+
+    /**
+     * Filesystem path of the project
+     */
+    private String $scriptRoot;
+
+    /**
      * Create the middleware object and set the client middleware stack.
      *
      * @param  Router       $router The \Ghorwood\Tangelo\Router object
      * @param  ConfigLookup $configLookup
      */
-    public function __construct(Router $router, ConfigLookup $configLookup, Mysql $mysql, CacheLookup $cacheLookup, Logger $logger)
+    public function __construct(Router $router, ConfigLookup $configLookup, Mysql $mysql, CacheLookup $cacheLookup, String $namespaceRoot, String $scriptRoot, Logger $logger)
     {
         $this->router = $router;
         $this->config = $configLookup;
         $this->cache = $cacheLookup;
         $this->logger = $logger;
         $this->mysql = $mysql;
+        $this->namespaceRoot = $namespaceRoot;
+        $this->scriptRoot = $scriptRoot;
 
         /**
          * Load all the user-defined middleware functions into an array.
@@ -77,7 +89,8 @@ class Middleware
          *
          * @todo Do a PSR-11 or something instead of whatever this is -gbh
          */
-        $mw = NAMESPACE_ROOT."\Middleware";
+        include_once($scriptRoot.'/Middleware.php');
+        $mw = '\\'.$this->namespaceRoot."\Middleware";
         $mwObj = new $mw($configLookup);
         $this->middleware = array_map(fn($m) => $mwObj->$m(), $mwObj::stack());
 
@@ -89,7 +102,8 @@ class Middleware
         $this->middleware[] = function ($psr7Request, $next = null) :ResponseInterface {
             try {
                 /**
-                 * Get 'class.method' that this http method/endpoint in the router resolves to
+                 * Search the route table for a 'class.method' that matches the endpoint and HTTP method
+                 * provided. This also parses and returns the path parameters in the endpoint.
                  * This throws RouterException for 404 and 405 cases.
                  */
                 $resolved = $this->router->getRoute($psr7Request->getMethod(), $psr7Request->getUri());
@@ -99,7 +113,8 @@ class Middleware
                  * Instantiate the controller class
                  * @todo Do a PSR-11 or something instead of whatever this is -gbh
                  */
-                $classByNamespace = NAMESPACE_ROOT.'\Controllers\\'.$className;
+                @include_once($this->scriptRoot.'/Controllers/'.$className.'.php');
+                $classByNamespace = $this->namespaceRoot.'\Controllers\\'.$className;
                 if(!class_exists($classByNamespace)) {
                     throw new RouterException("File does not exist", 500);
                 }
@@ -113,7 +128,7 @@ class Middleware
                 );
 
                 /**
-                 * Call the controller method
+                 * Call the controller method, executing the user's code for this endpoint.
                  */
                 $controllerResponse = $class->$method();
 
@@ -129,6 +144,9 @@ class Middleware
                     ]));
                 }
 
+                /**
+                 * Return the Psr7 Response returned from the user's controller method.
+                 */
                 return $controllerResponse;
             }
             /**
@@ -140,7 +158,7 @@ class Middleware
                 return new Response(json_encode(['data' => $re->getMessage()]), $re->getHttpCode());
             }
             /**
-             * Catch all other exceptions that result in 500
+             * Catch all other exceptions and handle as 500
              */
             catch (\Exception $e) {
                 return new Response(json_encode(['data' => $e->getMessage()]), 500);

@@ -2,12 +2,14 @@
 namespace Ghorwood\Tangelo\Lookups;
 
 use Swoole\Http\Table;
-
 use Ghorwood\Tangelo\Logger as Logger;
 
+/**
+ * Lookup for user-supplied caching
+ *
+ */
 class CacheLookup extends Lookup
 {
-    private Int $expirySeconds = 60;
 
     /**
      * Default constructor
@@ -21,7 +23,7 @@ class CacheLookup extends Lookup
 
 
     /**
-     * 
+     * Create the Swoole\Table for caching
      *
      * @return void
      */
@@ -29,7 +31,7 @@ class CacheLookup extends Lookup
     {
         try {
             /**
-             * create swoole table
+             * Call createDb in superclass
              */
             $configDb = $this->createDb(102400);
             $this->db = $configDb;
@@ -41,22 +43,32 @@ class CacheLookup extends Lookup
     }
 
 
-
-    public function store(String $method, String $identifier, String $data):bool
+    /**
+     * Store a string value in the cache keyed by the calling method and a unique identifier.
+     *
+     * @param  String $method     The method calling store(), ie. the output of __METHOD__
+     * @param  String $identifier An identifier unique to the record in the method.
+     * @param  String $data       The data to store
+     * @param  Int    $expiry     The life of the cached record in seconds. Default 60
+     * @return bool
+     */
+    public function store(String $method, String $identifier, String $data, Int $expiry = 60):bool
     {
-        $expiryTs = time() + $this->expirySeconds;
+        // @todo make this settable
+        $expiryTs = time() + $expiry;
 
-        if(!strlen(trim($method)) || !strlen(trim(strval($identifier)))) {
+        if (!strlen(trim($method)) || !strlen(trim(strval($identifier)))) {
             $this->logger->error("Could not cache on a null key in ".$method);
             return false;
         }
+
+        // we hash the method to reduce the amount of 'key too long' errors
         $key = md5($method)."::".$identifier;
 
         try {
             $this->db->set($key, ['line' => $data, 'expiry_ts' => $expiryTs]);
-            $this->logger->log("Cache: Stored with key $key and expiry {$this->expirySeconds}s in $method", 3);
-        }
-        catch (\Exception $e) {
+            $this->logger->log("Cache: Cached value stored at  $key and expiry {$expiry}s in $method", 3);
+        } catch (\Exception $e) {
             $this->logger->error("Cache: error storing key $key: ".$e->getMessage());
             return false;
         }
@@ -64,19 +76,36 @@ class CacheLookup extends Lookup
     }
 
 
+    /**
+     * Retrieve the value from the cache for the key
+     *
+     * @param  String $method     The method calling store(), ie. the output of __METHOD__
+     * @param  String $identifier An identifier unique to the record in the method.
+     * @return String or false
+     */
     public function retrieve(String $method, String $identifier)
     {
+        // we hash the method to reduce the amount of 'key too long' errors
         $key = md5($method)."::".$identifier;
-        $this->logger->log("Cache: trying retrieve of key $key and expiry {$this->expirySeconds}s in $method", 3);
+
         try {
             $response = $this->db->get($key);
-            if(!$response) {
-                $this->logger->log("Cache: No cached value at $key in $method", 3);
+
+            // no record at key
+            if (!$response) {
+                $this->logger->log("Cache: Cached value missed at  $key in $method", 3);
                 return false;
             }
+
+            // record is expired
+            if (time() > $response['expiry_ts']) {
+                $this->logger->log("Cache: Cached value expired at $key in $method", 3);
+                $this->db->del($key);
+                return false;
+            }
+
             return $response['line'];
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             $this->logger->error("Cache: error retrieving $key: ".$e->getMessage());
             return false;
         }

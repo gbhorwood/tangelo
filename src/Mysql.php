@@ -8,11 +8,26 @@ use Swoole\Database\PDOConfig;
 use Ghorwood\Tangelo\Lookups\ConfigLookup as ConfigLookup;
 use Ghorwood\Tangelo\Logger as Logger;
 
+/**
+ * Database access object
+ *
+ */
 class Mysql
 {
-    private Logger $logger;
+    /**
+     * Lookup wrapping Swoole\Tanble of config data
+     */
     private ConfigLookup $config;
+
+    /**
+     * The Swoole PDO pool
+     */
     private ?PDOPool $pdoPool = null;
+
+    /**
+     * The logger
+     */
+    private Logger $logger;
 
 
     /**

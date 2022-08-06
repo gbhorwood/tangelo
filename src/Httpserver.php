@@ -38,9 +38,14 @@ class Httpserver
     private CacheLookup $cacheLookup;
     private Logger $logger;
     private Mysql $mysql;
+    private String $scriptRoot;
+    private String $namespaceRoot;
 
     public function __construct(String $scriptRoot, String $namespaceRoot)
     {
+        $this->scriptRoot = $scriptRoot;
+        $this->namespaceRoot = $namespaceRoot;
+
         $this->logger = new Logger();
 
         /**
@@ -98,8 +103,8 @@ class Httpserver
             'max_coroutine' => SERVER_MAX_COROUTINES,
             'enable_coroutine' => true,
         ]);
-        $this->logger->ok("Listening on ".$serverIp.":".$serverPort, 1);
         $this->logger->ok("Max coroutines ".SERVER_MAX_COROUTINES, 1);
+        $this->logger->ok("Listening on ".$serverIp.":".$serverPort, 1);
 
         /**
          * Handle incoming requests.
@@ -108,7 +113,7 @@ class Httpserver
          */
         $http->on('Request', function (SwRequest $swRequest, SwResponse $swResponse) {
             $psr7Request = $this->makePsr7Request($swRequest);
-            $mw = new Middleware($this->router, $this->configLookup, $this->mysql, $this->cacheLookup, $this->logger);
+            $mw = new Middleware($this->router, $this->configLookup, $this->mysql, $this->cacheLookup, $this->namespaceRoot, $this->scriptRoot, $this->logger);
             $psr7Response = $mw->run($psr7Request);
             $this->emitPsr7($swResponse, $psr7Response);
         });
@@ -147,7 +152,7 @@ class Httpserver
     {
         $factory = new ServerRequestFactory();
         $psr7Request = $factory->createServerRequest($request->getMethod(), $request->server['request_uri'] ?? '/');
-        $psr7Request = $psr7Request->withQueryParams($request->get);
+        $psr7Request = $psr7Request->withQueryParams($request->get ?? []);
         return $psr7Request;
     } // makePsr7Request
 }

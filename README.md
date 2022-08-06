@@ -1,7 +1,21 @@
 # tangelo
-basic restful api framework for openswoole
+A basic restful api framework for openswoole.
 
-## install swoole
+## what tangelo is
+tangelo is a feature-lite framework for building restful apis on top of [openswoole](https://openswoole.com/).
+It is designed for use on internal projects at [fruitbat studios](https://fruitbat.studio) and kludgetastic implementations.
+
+## creating a tangelo project
+Creating a new tangelo project is a three step process:
+
+- Install openswoole
+- Create an empty composer project
+- Install tangelo via composer
+- Create the default structure of the project with the `scaffold.php` command
+
+## Install openswoole
+Openswool is an extension for PHP delivered through [pecl](https://pecl.php.net/).
+>>>>>>> develop
 
 ```
 sudo apt update

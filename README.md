@@ -15,7 +15,6 @@ Creating a new tangelo project is a three step process:
 
 ## Install openswoole
 Openswool is an extension for PHP delivered through [pecl](https://pecl.php.net/).
->>>>>>> develop
 
 ```
 sudo apt update
